@@ -22,7 +22,7 @@ class KnowledgeBaseAgent:
     def __init__(self, deployment: AgentDeployment, consumer_id: str):
         self.deployment = deployment
         self.consumer_id = consumer_id
-        self.market_kb = KnowledgeBase(kb_deployment=self.deployment.kb_deployments[0])
+        self.market_kb = KnowledgeBase()
     
     def _create_kb_input(self, func_name: str, func_input_data: Optional[Dict[str, Any]] = None) -> KBRunInput:
         """ Helper method to create KBRunInput with proper signature """
@@ -46,7 +46,7 @@ class KnowledgeBaseAgent:
                 func_name="ingest_knowledge",
                 func_input_data=store_input.model_dump()
             )
-            result = await self.market_kb.call_kb_func(kb_run_input)
+            result = await self.market_kb.run(kb_run_input)
 
             return result.model_dump()
         except Exception as e:
@@ -62,7 +62,7 @@ class KnowledgeBaseAgent:
                 func_name="search",
                 func_input_data=query_input.model_dump()
             )
-            result = await self.market_kb.call_kb_func(kb_run_input)
+            result = await self.market_kb.run(kb_run_input)
             result_dict = result.model_dump()
             
             if result_dict.get("status") == "success":
@@ -77,7 +77,7 @@ class KnowledgeBaseAgent:
 
         try:
             kb_run_input = self._create_kb_input(func_name="clear")
-            result = await self.market_kb.call_kb_func(kb_run_input)
+            result = await self.market_kb.run(kb_run_input)
             return result.model_dump()
         except Exception as e:
             logger.error(f"Error clearing knowledge base: {str(e)}")
@@ -90,6 +90,7 @@ async def run(module_run: Dict[str, Any]) -> Dict[str, Any]:
         module_run = AgentRunInput(**module_run)
         module_run.inputs = InputSchema(**module_run.inputs)
         agent = KnowledgeBaseAgent(module_run.deployment, module_run.consumer_id)
+        await agent.market_kb.create(deployment=module_run.deployment.kb_deployments[0])
         
         method = getattr(agent, module_run.inputs.func_name)
         if not method:
