@@ -1,0 +1,27 @@
+[
+    {
+        "name": "knowledge_base_agent_deployment",
+        "module": {
+            "name": "knowledge_base_agent",
+            "description": "Knowledge Base Agent",
+            "parameters": "{function_name: str, function_input_data: Optional[Dict[str, Any]]}",
+            "module_type": "agent",
+            "module_version": "v0.1",
+            "module_entrypoint": "run.py",
+            "execution_type": "package"
+        },
+        "node": {"ip": "127.0.0.1"},
+        "config": {
+            "config_name": "config_1",
+            "llm_config": {"config_name": "model_2"},
+            "system_prompt": {
+                "role": "You are a helpful AI assistant."
+            }
+        },
+        "kb_deployments": [
+            {
+                "name": "market_kb_deployment"
+            }
+        ]
+    }
+]

@@ -1,0 +1,28 @@
+[
+    {
+        "name": "market_kb_deployment",
+        "module": {"name": "market_kb"},
+        "node": {"ip": "127.0.0.1"},
+        "config": {
+            "storage_config": {
+                "storage_type": "db",
+                "path": "market_kb",
+                "options": {
+                    "query_col": "text",
+                    "answer_col": "text",
+                    "embedding_col": "embedding"
+                },
+                "storage_schema": {
+                    "id": {"type": "INTEGER", "primary_key": true}, 
+                    "text": {"type": "TEXT"},
+                    "embedding": {"type": "VECTOR", "dimension": 768},
+                    "metadata": {"type": "JSONB"},
+                    "source": {"type": "TEXT"},
+                    "timestamp": {"type": "TIMESTAMP"},
+                    "start": {"type": "INTEGER"},
+                    "end": {"type": "INTEGER"}
+                }
+            }
+        }
+    }
+]
