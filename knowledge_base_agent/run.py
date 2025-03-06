@@ -24,7 +24,7 @@ class KnowledgeBaseAgent:
         self.consumer_id = consumer_id
         self.market_kb = KnowledgeBase()
     
-    def _create_kb_input(self, func_name: str, func_input_data: Optional[Dict[str, Any]] = None) -> KBRunInput:
+    def _create_kb_input(self, func_name: str, signature: str, func_input_data: Optional[Dict[str, Any]] = None) -> KBRunInput:
         """ Helper method to create KBRunInput with proper signature """
 
         return KBRunInput(
@@ -34,7 +34,7 @@ class KnowledgeBaseAgent:
                 "func_input_data": func_input_data
             },
             deployment=self.deployment.kb_deployments[0],
-            signature=sign_consumer_id(self.consumer_id, os.getenv("PRIVATE_KEY"))
+            signature=signature
         )
     
     async def store(self, model_run: Dict[str, Any]) -> Dict[str, Any]:
@@ -44,7 +44,8 @@ class KnowledgeBaseAgent:
             store_input = StoreInput(**model_run.inputs.func_input_data)
             kb_run_input = self._create_kb_input(
                 func_name="ingest_knowledge",
-                func_input_data=store_input.model_dump()
+                func_input_data=store_input.model_dump(),
+                signature=model_run.signature
             )
             result = await self.market_kb.run(kb_run_input)
 
@@ -60,7 +61,8 @@ class KnowledgeBaseAgent:
             query_input = QueryInput(**model_run.inputs.func_input_data)
             kb_run_input = self._create_kb_input(
                 func_name="search",
-                func_input_data=query_input.model_dump()
+                func_input_data=query_input.model_dump(),
+                signature=model_run.signature
             )
             result = await self.market_kb.run(kb_run_input)
             result_dict = result.model_dump()
@@ -76,7 +78,7 @@ class KnowledgeBaseAgent:
         """ Clear all data from the knowledge base """
 
         try:
-            kb_run_input = self._create_kb_input(func_name="clear")
+            kb_run_input = self._create_kb_input(func_name="clear", signature=model_run.signature)
             result = await self.market_kb.run(kb_run_input)
             return result.model_dump()
         except Exception as e:

@@ -14,6 +14,7 @@
                 },
                 "storage_schema": {
                     "id": {"type": "INTEGER", "primary_key": true}, 
+                    "knowledge_id": {"type": "TEXT"},
                     "text": {"type": "TEXT"},
                     "embedding": {"type": "VECTOR", "dimension": 768},
                     "metadata": {"type": "JSONB"},
