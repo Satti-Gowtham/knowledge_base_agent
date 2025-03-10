@@ -8,8 +8,7 @@ from naptha_sdk.utils import get_logger
 from knowledge_base_agent.schemas import (
     InputSchema, 
     QueryInput, 
-    StoreInput, 
-    QueryResponse
+    StoreInput
 )
 
 load_dotenv()
@@ -55,24 +54,61 @@ class KnowledgeBaseAgent:
             return {"status": "error", "message": str(e)}
 
     async def query(self, model_run: Dict[str, Any]) -> Dict[str, Any]:
-        """ Query the market knowledge base using semantic search """
+        """ Query the knowledge base """
 
         try:
             query_input = QueryInput(**model_run.inputs.func_input_data)
+            logger.info(f"Querying KB with: {query_input.query}")
+            
+            kb_query_data = {
+                "query": query_input.query,
+                "top_k": query_input.top_k
+            }
+            
+            # Set up and execute the KB query
             kb_run_input = self._create_kb_input(
                 func_name="search",
-                func_input_data=query_input.model_dump(),
+                func_input_data=kb_query_data,
                 signature=model_run.signature
             )
-            result = await self.market_kb.run(kb_run_input)
-            result_dict = result.model_dump()
+
+            await self.market_kb.create(self.deployment.kb_deployments[0])
+            kb_response = await self.market_kb.run(kb_run_input)
             
-            if result_dict.get("status") == "success":
-                return QueryResponse(**result_dict).model_dump()
-            return result_dict
+            if hasattr(kb_response, "model_dump"):
+                response_data = kb_response.model_dump()
+            else:
+                response_data = kb_response
+
+            if response_data.get("status") == "completed" and "results" in response_data:
+                results = json.loads(response_data["results"][0])["results"]
+                data = json.loads(results[0])['data']
+                if not data:
+                    return {
+                        "status": "success", 
+                        "message": "No relevant information found for your query.",
+                        "results": []
+                    }
+                    
+                return {
+                    "status": "success",
+                    "results": json.dumps(data)
+                }
+           
+            else:
+                return {
+                    "status": response_data.get("status", "error"),
+                    "message": response_data.get("message", "Unknown error in knowledge base query"),
+                    "results": []
+                }
+                
         except Exception as e:
-            logger.error(f"Error querying knowledge base: {str(e)}")
-            return {"status": "error", "message": str(e)}
+            logger.error(f"Error in query: {str(e)}")
+            return {
+                "status": "error", 
+                "message": f"Error querying knowledge base: {str(e)}",
+                "results": []
+            }
 
     async def clear(self, model_run: Dict[str, Any]) -> Dict[str, Any]:
         """ Clear all data from the knowledge base """
@@ -139,7 +175,7 @@ if __name__ == "__main__":
             "inputs": {
                 "func_name": "store",
                 "func_input_data": {
-                    "text": test_text,
+                    "content": test_text,
                     "metadata": {"source": "Lorem Ipsum History", "type": "test"}
                 }
             },
@@ -166,7 +202,7 @@ if __name__ == "__main__":
             "inputs": {
                 "func_name": "query",
                 "func_input_data": {
-                    "query": "What is Lorem Ipsum and its history?",
+                    "query": "What is Lorem Ipsum?",
                     "top_k": 2
                 }
             },
@@ -182,10 +218,8 @@ if __name__ == "__main__":
         else:
             try:
                 # Parse the JSON string from results array
-                kb_result = json.loads(result.get("results", ["{}"])[0])
-                print(kb_result)
-                if kb_result.get("status") == "success":
-                    data = json.loads(kb_result.get("results", ["{}"])[0]).get("data", [])
+                if result.get("status") == "success":
+                    data = json.loads(result.get('results')) if isinstance(result.get('results'), str) else result.get('results')
                     print("✅ Found", len(data), "relevant results\n")
                     
                     for i, item in enumerate(data, 1):
@@ -210,7 +244,7 @@ if __name__ == "__main__":
                         if i < len(data):
                             print("\n" + "-"*80)
                 else:
-                    print("❌ Knowledge Base Error:", kb_result.get("message", "Unknown error"))
+                    print("❌ Knowledge Base Error:", result.get("message", "Unknown error"))
             except json.JSONDecodeError as e:
                 print("❌ Error parsing results:", str(e))
             except Exception as e:

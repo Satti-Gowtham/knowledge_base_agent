@@ -10,7 +10,7 @@ class QueryInput(BaseModel):
     top_k: int = 2
 
 class StoreInput(BaseModel):
-    text: str
+    content: str
     metadata: Dict[str, Any] = {}
 
 class KnowledgeResponse(BaseModel):
@@ -21,6 +21,7 @@ class KnowledgeResponse(BaseModel):
     metadata: Dict[str, Any]
     source: Optional[str]
     timestamp: str
+    similarity: float
 
 class QueryResponse(BaseModel):
     status: str
